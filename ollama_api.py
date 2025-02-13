@@ -1,6 +1,7 @@
 from langchain_community.llms import Ollama
 from ollama import Client
 from typing import List, Dict
+import os
 
 
 def log_message(message: str, level: str = "INFO"):
@@ -19,7 +20,20 @@ def get_available_models() -> List[Dict]:
         client = Client(host='http://localhost:11434')
         response = client.list()
         log_message("获取可用模型列表")
-        return response['models']
+        
+        # 指定获取一个特定的模型
+        model_name = os.getenv('OLLAMA_MODEL_NAME', 'deepseek-r1:1.5b')  # 从环境变量获取模型名称
+        
+        specific_model = next((model for model in response['models'] if model['model'] == model_name), None)
+        
+        if specific_model:
+            return [specific_model]  # 返回包含特定模型的列表
+        elif response['models']:  # 如果未找到特定模型但模型列表不为空
+            log_message(f"未找到模型: {model_name}，使用第一个可用模型: {response['models'][0]['model']}")
+            return [response['models'][0]]  # 返回第一个可用模型
+        else:
+            log_message("未找到任何可用模型", level="ERROR")
+            return []
     except Exception as e:
         log_message(f"获取模型列表时发生错误: {str(e)}", level="ERROR")
         return []

@@ -252,4 +252,4 @@ class MyModel(BaseModel):
         return values
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=8888)  # Use socketio.run instead of app.run 
+    socketio.run(app, host='0.0.0.0', debug=True, port=8888)  # Allow access from any IP address 
