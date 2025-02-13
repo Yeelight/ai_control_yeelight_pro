@@ -36,6 +36,9 @@ Whisper 是由 OpenAI 开发的一个自动语音识别（ASR）模型，它能�
 也可以手动下载 Whisper 模型，访问 [Whisper GitHub](https://github.com/openai/whisper#available-models-and-languages) 的模型发布页面，并找到你想要下载的模型版本。例如，如果你想下载 `base` 模型，可以通过以下命令下载：
 
 ```bash
+cd ~
+mkdir ai_home_control_space
+cd ai_home_control_space
 curl -L -o whisper-base.pt https://huggingface.co/openai/whisper-large/resolve/main/pytorch_model.bin
 ```
 
@@ -71,9 +74,13 @@ brew install python@3.9
 安装完成后，您可以通过运行以下命令来验证安装：
 
 ```bash
-/opt/homebrew/bin/python3.9 --version  # Apple Silicon 架构
-/usr/local/opt/python@3.9 --version   # Intel 架构
-pip3 --version
+ ## Apple Silicon 架构 
+/opt/homebrew/bin/python3.9 --version
+/opt/homebrew/opt/python@3.9/bin/pip3.9 --version
+
+## Intel 架构
+/usr/local/opt/python@3.9 --version
+/usr/local/opt/python@3.9/bin/pip3.9 --version
 ```
 
 ### 2.3 安装 ffmpeg
@@ -89,14 +96,16 @@ brew install ffmpeg
 使用 Git 克隆项目到本地：
 
 ```bash
-git clone https://gitlab.yeelight.com/ai/ai_home_control.git
+cd ~/ai_home_control_space
+git clone https://github.com/Yeelight/ai_control_yeelight_pro.git
 cd ai_home_control
 ```
 
 或者直接下载文件压缩包：
 
 ```bash
-curl -L -C - -o ai_home_control.zip https://yeelight.feishu.cn/file/HgNtb4Lc3o4ZvaxWuhYcfbojnUf
+curl -L -C - -o ai_home_control.zip https://github.com/Yeelight/ai_control_yeelight_pro/archive/refs/tags/V0.0.1.zip
+
 ```
 
 ## 4. 设置 Python 环境
@@ -106,7 +115,11 @@ curl -L -C - -o ai_home_control.zip https://yeelight.feishu.cn/file/HgNtb4Lc3o4Z
 在项目目录中创建一个 Python 虚拟环境：
 
 ```bash
+## Apple Silicon 架构 
 /opt/homebrew/bin/python3.9 -m venv venv
+
+## Intel 架构
+/usr/local/opt/python@3.9  -m venv venv
 ```
 
 ### 4.2 激活虚拟环境
@@ -120,8 +133,11 @@ source venv/bin/activate
 确保您在虚拟环境中，然后安装项目所需的 Python 依赖项：
 
 ```bash
-pip3 config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
-pip install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+## Apple Silicon 架构 
+/opt/homebrew/opt/python@3.9/bin/pip3.9 install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
+
+## Intel 架构
+/usr/local/opt/python@3.9/bin/pip3.9 install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 ```
 
 ## 5. 启动服务
@@ -129,7 +145,11 @@ pip install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web
 确保您仍在虚拟环境中，然后运行 Flask 应用程序：
 
 ```bash
-python app.py
+## Apple Silicon 架构 
+/opt/homebrew/bin/python3.9 app.py
+
+## Intel 架构
+/usr/local/opt/python@3.9 app.py
 ```
 
 ## 6. 访问应用程序
@@ -139,7 +159,9 @@ python app.py
 ```bash
 http://localhost:8888
 ```
+
 ![alt text](static/image-2.png)![alt text](static/image-3.png)
 
 ## 7. 打开本地网关局域网控制
+
 ![alt text](static/image.png)![alt text](static/image-1.png)
