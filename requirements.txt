@@ -1,5 +1,6 @@
 Flask==2.2.2
-whisper==1.0.0  # Ensure you have the correct version for your Whisper implementation
+Flask-SocketIO==5.3.6
+openai-whisper
 Werkzeug==2.2.2  # Adjust based on compatibility
 langchain==0.2.17 
 langchain-core==0.2.43 
