@@ -104,7 +104,7 @@ cd ai_home_control
 或者直接下载文件压缩包：
 
 ```bash
-curl -L -C - -o ai_home_control.zip https://github.com/Yeelight/ai_control_yeelight_pro/archive/refs/tags/V0.0.1.zip
+curl -L -C - -o ai_home_control.zip https://github.com/Yeelight/ai_control_yeelight_pro/archive/refs/tags/v0.0.1.zip
 
 ```
 
