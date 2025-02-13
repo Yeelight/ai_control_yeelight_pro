@@ -1,0 +1,145 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    margin-top: 20px;
+}
+
+button.recording {
+    background-color: #dc3545; /* Change to red when recording */
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#recordingIndicator {
+    margin-top: 10px;
+    color: #dc3545; /* Red color for recording indicator */
+    font-weight: bold;
+}
+
+.hidden {
+    display: none; /* Hide the recording indicator by default */
+}
+
+#transcription {
+    padding: 10px;
+    background-color: white;
+    max-width: 600px;
+    word-wrap: break-word;
+    height: 70%;
+    width: 90%; 
+    overflow-y: auto;
+    border: none;
+    margin: initial;
+} 
+
+
+/* Modal styles */
+.modal {
+    display: flex;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none; /* Hide elements with this class */
+}
+
+
+.logContainer {
+    width: 100%;  /* Set width to 100% or a specific value */
+    max-width: 700px;  /* Optional: Set a maximum width */
+    height: 300px;  /* Set a fixed height */
+    overflow-y: auto;  /* Enable vertical scrolling */
+    border: 1px solid #ddd;  /* Optional: Add a border */
+    border-radius: 5px;  /* Optional: Add rounded corners */
+    background-color: white;  /* Optional: Set background color */
+    padding: 10px;  /* Optional: Add padding */
+}
+
+#logList {
+    list-style-type: none;  /* Remove default list styling */
+    padding: 0;  /* Remove padding */
+    margin: 0;  /* Remove margin */
+}
+/* static/style.css */
+
+.title {
+    text-align: center; /* Center the title */
+}
+
+.button-container {
+    display: inline-block; /* Keep buttons inline */
+}
+
+.label {
+    font-size: 1.2em; /* Label font size */
+    margin-right: 10px; /* Space between label and button */
+}
+
+.button-center {
+    text-align: center; /* Center the buttons */
+}
+
+.transcription {
+    height: 100px; 
+    overflow-y: auto; 
+    text-align: left; /* Left align text */
+    margin-left: inherit; /* Inherit margin */
+}
+
+.log-list {
+    max-height: 300px; 
+    overflow-y: auto; /* Enable vertical scrolling */
+}

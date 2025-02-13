@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Controlled Yeelight Pro</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <script src="static/socket.io.min.js"></script>  <!-- Include Socket.IO client -->
+</head>
+<body>
+    <h1 class="title">AI-Controlled Yeelight Pro</h1>
+    <div class="button-container">
+        <label class="label">使用 Whisper AI 进行语音识别：</label>
+        <button id="openModalButton">开始录音</button>  <!-- Button to open modal -->
+    </div>
+
+    <!-- Modal for recording -->
+    <div id="recordingModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" id="closeModalButton">&times;</span>
+            <h2>From Recording</h2>
+            <p>Record audio using your microphone</p>
+            <div class="button-center">  <!-- Center the buttons -->
+                <button id="startButton">开始录音</button>
+                <button id="stopButton" class="hidden">停止录音</button>
+            </div>
+            <div id="recordingIndicator" class="hidden">正在录音...</div>
+        </div>
+    </div>
+    <br>
+    <div class="logContainer">
+        <h5 id="result">语音识别结果：</h5>
+        <span id="resultDiv"></span>
+        <p id="transcription" class="transcription"></p>
+    </div>
+    <div id="submitDiv" class="hidden">
+        <label class="label">使用 Ollama 本地 AI 模型进行意图识别与设备控制：</label>
+        <button id="submitButton">模型推理</button>
+    </div>
+    
+    <br>
+    <div id="logContainer" class="logContainer">
+        <h5>日志输出:</h5>
+        <div id="logList" class="log-list"></div>  <!-- Log list for displaying messages -->
+    </div>
+
+    <script src="static/script.js"></script>  <!-- Your custom script -->
+</body>
+</html>
