@@ -13,7 +13,13 @@ class Logger:
 
     def log_message_stream(self, message: str):
         """Log formatted messages and emit to WebSocket."""
-        self.socketio.emit('log_update', {'message': message})  # Emit log message to WebSocket clients
+        try:
+            print(message, end='', flush=True)  # 实时输出
+            self.socketio.emit('log_update', {'message': message}, namespace='/')  # 实时发送到客户端
+            self.socketio.sleep(0.05)  # 确保事件循环继续执行
+        except Exception as e:
+            print(f"日志输出失败: {str(e)}", flush=True)  # 打印错误信息
+        
 
 # 全局 logger 实例
 logger = None

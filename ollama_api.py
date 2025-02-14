@@ -17,13 +17,15 @@ def get_available_models() -> List[Dict]:
         模型列表，每个模型包含名称和其他信息
     """
     try:
-        client = Client(host='http://localhost:11434')
+        ollama_ip = os.getenv('OLLAMA_IP_PORT', 'http://localhost:11434')  
+        log_message(f"ollama_ip: {ollama_ip}")
+        client = Client(host=ollama_ip)
         response = client.list()
-        log_message("获取可用模型列表")
+        log_message(f"获取可用模型列表：{response}")
         
         # 指定获取一个特定的模型
         model_name = os.getenv('OLLAMA_MODEL_NAME', 'deepseek-r1:1.5b')  # 从环境变量获取模型名称
-        
+        log_message(f"指定获取一个特定的模型: {model_name}")
         specific_model = next((model for model in response['models'] if model['model'] == model_name), None)
         
         if specific_model:
@@ -54,7 +56,10 @@ def initialize_llm():
         # 直接使用第一个可用的模型的名称
         selected_model = available_models[0]['model']  # 确保提取模型名称
         log_message(f"使用的 ollama 本地模型为: {selected_model}")
-        return Ollama(model=selected_model, temperature=0)  # 传递模型名称字符串
+        
+        
+        # 传递模型名称字符串和 IP 地址
+        return Ollama(model=selected_model, temperature=0,base_url=os.getenv('OLLAMA_IP_PORT', 'http://localhost:11434'))
     except Exception as e:
         log_message(f"获取模型列表失败: {str(e)}", level="ERROR")
         return None

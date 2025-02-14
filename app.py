@@ -8,23 +8,35 @@ from typing import List, Dict
 import whisper
 import opencc
 import os
+import subprocess  # 导入 subprocess 模块以调用 shell 命令
 import time
 import warnings
 import soundfile as sf  # For reading and writing audio files
 from pydub import AudioSegment
 from ollama_api import initialize_llm
 from utils import extract_json
-from gateway import discover_and_connect_gateway,get_topology,send_command
+from gateway import get_topology,send_command,discover_gateway,connect_to_gateway
 from pydantic import BaseModel, model_validator
 from logger import init_logger, get_logger  # 在需要时获取 Logger 实例  # 导入初始化函数
 from prompts import prompt  # Import the prompt variable from prompts.py
 from datetime import datetime
 from config import *  # 导入配置文件中的环境变量
+from piper import PiperVoice
+import uuid
+import wave
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 app.secret_key = 'your_secret_key'  # 设置一个密钥用于会话
-socketio = SocketIO(app)  # Initialize SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*")  # 允许所有来源
+
+# 定义模型和配置文件的路径
+model_path = "tts/zh_CN-huayan-medium.onnx"
+config_path = "tts/zh_CN-huayan-medium.onnx.json"
+
+# 检查文件是否存在
+if not os.path.exists(model_path) or not os.path.exists(config_path):
+    raise FileNotFoundError("模型或配置文件未找到，请确保它们已下载并存储在 tts 目录中。")
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='whisper')
@@ -62,12 +74,6 @@ gateway_address = None
 init_logger(socketio)
 
 logger = get_logger()  # 在需要时获取 Logger 实例
-
-def connect_gateway():
-    global sock, gateway_address
-    if sock is None:  # Only connect if not already connected
-        sock, gateway_address = discover_and_connect_gateway(socketio)  # Pass socketio instance
-        logger.log_message(f"Connected to gateway at {gateway_address}")
 
 # Function to log messages
 def log_message(level, message):
@@ -137,13 +143,12 @@ def transcribe():
 def submit():
     user_input = request.json.get('user_input')  # 获取用户输入
     try:
-        logger.log_message("使用的 ollama 本地模型为: " + llm.model)
-        connect_gateway()  # Ensure the gateway is connected
+        logger.log_message("使用的 ollama 本地模型为:" + llm.base_url + llm.model)
+        
         # 获取模型输出（流式处理）
         logger.log_message("ollama 模型响应开始")
         full_response = []
         for chunk in chain.stream(user_input):
-            print(chunk, end='', flush=True)  # 实时输出
             logger.log_message_stream(chunk)
             full_response.append(chunk)
         logger.log_message_stream("\n")
@@ -155,8 +160,22 @@ def submit():
         # 解析响应为 JSON
         try:
             command_data = extract_json(response)
-            # 调用设备控制函数
-            control_device(command_data, sock)  # 传递已连接的 socket
+            result_message = control_device(command_data) if command_data else "无效的命令数据"
+            
+            # 使用 Piper 进行语音合成，将结果信息转换为音频文件
+            voice = PiperVoice.load(model_path, config_path=config_path)
+            unique_filename = f'static/result_audio_{uuid.uuid4()}.wav'  # 生成唯一文件名
+            
+            # 合成语音并写入 WAV 文件
+            try:
+                # 调用 synthesize 方法生成音频数据
+                with wave.open(unique_filename, 'wb') as wav_file:  # 打开 WAV 文件以写入
+                    voice.synthesize(result_message, wav_file)  # 生成音频数据
+            except Exception as e:
+                logger.log_message(f"语音合成时出错: {str(e)}", level="ERROR")
+                return jsonify({'status': 'error', 'message': '语音合成失败。'}), 500
+            
+            return jsonify({'status': 'success', 'audio_path': unique_filename})
         except ValueError as e:
             logger.log_message(f"解析响应失败: {str(e)}", level="ERROR")
         except Exception as e:
@@ -168,13 +187,17 @@ def submit():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
-def control_device(command_data, sock):
+def control_device(command_data):
+    global sock  # 在这里也声明 sock 为全局变量
     """
     控制设备
     command_data: 包含控制命令的字典
-    sock: 已连接的 socket 对象
     """
     try:
+        if sock is None:
+            logger.log_message("Socket 未连接，无法发送命令", level="ERROR")
+            return "Socket 未连接，无法发送命令"
+
         # 获取拓扑信息
         logger.log_message("获取拓扑信息")
         devices = get_topology(sock)
@@ -203,7 +226,7 @@ def control_device(command_data, sock):
         
         if not filtered_devices:
             logger.log_message(f"未找到符合条件的设备: {name}", level="ERROR")
-            return
+            return "未找到符合条件的设备: {name}"
             
         # 构建控制指令
         logger.log_message("构建控制指令")
@@ -239,8 +262,13 @@ def control_device(command_data, sock):
         logger.log_message("发送控制命令")
         send_command(sock, command)
         
+        logger.log_message("命令已成功发送")
+        return "命令已成功发送"
+        
     except Exception as e:
-        logger.log_message(f"控制设备时出错: {str(e)}", level="ERROR")
+        error_message = f"控制设备时出错: {str(e)}"
+        logger.log_message(error_message, level="ERROR")
+        return error_message
 
 
 class MyModel(BaseModel):
@@ -251,5 +279,21 @@ class MyModel(BaseModel):
         # Your validation logic here
         return values
 
+@app.route('/scan_gateways', methods=['GET'])
+def scan_gateways():
+    global sock  # 声明 sock 为全局变量
+    try:
+        # 调用函数以仅扫描网关
+        gateways = discover_gateway(socketio, scan_only=True)
+        
+        # 确保 discover_gateway 返回两个值
+        sock, connected_gateway = discover_gateway(socketio, scan_only=False)
+        
+        return jsonify({'status': 'success', 'gateways': gateways, 'connected_gateway': connected_gateway})
+    except Exception as e:
+        logger.log_message(f"扫描网关时出错: {str(e)}", level="ERROR")
+        return jsonify({'status': 'success', 'gateways': gateways, 'message': str(e)}), 500
+
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=True, port=8888)  # Allow access from any IP address 
+    # 使用 eventlet 的 WSGI 服务器运行应用
+    socketio.run(app, host='0.0.0.0', port=8888)  # 使用 HTTP 端口 

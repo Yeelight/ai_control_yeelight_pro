@@ -71,6 +71,40 @@ document.getElementById('stopButton').onclick = () => {
         mediaRecorder = null;  // Reset mediaRecorder
     }
 };
+document.getElementById('submitButton').onclick = async () => {
+    // 添加 loading 效果
+    const submitButton = document.getElementById('submitButton');
+    submitButton.disabled = true; // 禁用按钮以防止重复提交
+    submitButton.innerText = '提交中...'; // 更新按钮文本
+
+    const response = await fetch('/submit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_input: transcriptionText }) // Send transcription text
+    });
+
+    // 恢复按钮状态
+    submitButton.disabled = false; // 启用按钮
+    submitButton.innerText = '提交'; // 恢复按钮文本
+
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+        const audioPath = data.audio_path; // 获取音频路径
+        const logList = document.getElementById('logList');
+        const audioElement = document.createElement('audio'); // 创建音频元素
+        audioElement.src = audioPath; // 确保路径正确
+        audioElement.controls = true; // 启用音频控件
+        audioElement.autoplay = true; // 自动播放音频
+        logList.appendChild(audioElement); // 将音频播放器添加到 logList 中
+        logList.appendChild(document.createElement('br')); // Append a line break
+    } else {
+        console.error('Error:', data.message);
+    }
+}; 
+
 const socket = io();  // Initialize SocketIO client
 
 // Listen for log updates from the server
@@ -80,15 +114,34 @@ socket.on('log_update', function(data) {
     logList.scrollTop = logList.scrollHeight;  // Scroll to the bottom
 });
 
-// Submit button event
-document.getElementById('submitButton').onclick = async () => {
-    const response = await fetch('/submit', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ user_input: transcriptionText }) // Send transcription text
-    });
-    const data = await response.json();
-    console.log(`Submit response: ${data.message}`); // Log response
-}; 
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/scan_gateways')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const gatewaysList = document.getElementById('gateways-list');
+                const connectedGateway = document.getElementById('connected-gateway');
+                
+                // 解析已连接的网关信息
+                const connectedGatewayInfo = data.connected_gateway;
+                if (connectedGatewayInfo==undefined) {
+                    connectedGateway.textContent = `已连接的网关: 无`;
+                }else{
+                    connectedGateway.textContent = `已连接的网关: IP - ${connectedGatewayInfo}`;
+                }
+                
+                // 解析扫描到的网关信息
+                data.gateways.forEach(gatewayInfo => {
+                    const listItem = document.createElement('p');
+                    listItem.textContent = `网关地址: IP - ${gatewayInfo.ip}, MAC - ${gatewayInfo.mac}, DID - ${gatewayInfo.did}`;
+                    gatewaysList.appendChild(listItem);
+                });
+            } else {
+                console.error('Error fetching gateways:', data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+});
+

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="static/style.css">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
     <script src="static/socket.io.min.js"></script>  <!-- Include Socket.IO client -->
+   
 </head>
 <body>
     <h1 class="title">AI-Controlled Yeelight Pro</h1>
@@ -44,7 +45,16 @@
         <h5>日志输出:</h5>
         <div id="logList" class="log-list"></div>  <!-- Log list for displaying messages -->
     </div>
-
+    <br>
+    <!-- 新增的网关展示部分 -->
+    <div class="logContainer">
+        <h5>附近的网关:</h5>
+        <p id="gateways-list"></p>
+        <h5>已连接的网关:</h5>
+        <p id="connected-gateway">无</p>
+        <!-- 新增重新连接网关按钮 -->
+    </div>
+    
     <script src="static/script.js"></script>  <!-- Your custom script -->
 </body>
 </html>
