@@ -33,15 +33,6 @@ Whisper 是由 OpenAI 开发的一个自动语音识别（ASR）模型，它能�
 
 可以在项目文件 `config.py` 中指定模型大小，默认为 `base` 模型，初次运行项目时，会下载模型并加载，需要等待几分钟时间。
 
-也可以手动下载 Whisper 模型，访问 [Whisper GitHub](https://github.com/openai/whisper#available-models-and-languages) 的模型发布页面，并找到你想要下载的模型版本。例如，如果你想下载 `base` 模型，可以通过以下命令下载：
-
-```bash
-cd ~
-mkdir ai_home_control_space
-cd ai_home_control_space
-curl -L -o whisper-base.pt https://huggingface.co/openai/whisper-large/resolve/main/pytorch_model.bin
-```
-
 ## 2. 其他先决条件
 
 在开始之前，请确保您的 MacBook 上安装了以下软件：
