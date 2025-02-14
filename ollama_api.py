@@ -17,13 +17,15 @@ def get_available_models() -> List[Dict]:
         模型列表，每个模型包含名称和其他信息
     """
     try:
-        client = Client(host='http://localhost:11434')
+        ollama_ip = os.getenv('OLLAMA_IP_PORT', 'http://localhost:11434')  
+        log_message(f"ollama_ip: {ollama_ip}")
+        client = Client(host=ollama_ip)
         response = client.list()
-        log_message("获取可用模型列表")
+        log_message(f"获取可用模型列表：{response}")
         
         # 指定获取一个特定的模型
         model_name = os.getenv('OLLAMA_MODEL_NAME', 'deepseek-r1:1.5b')  # 从环境变量获取模型名称
-        
+        log_message(f"指定获取一个特定的模型: {model_name}")
         specific_model = next((model for model in response['models'] if model['model'] == model_name), None)
         
         if specific_model:
