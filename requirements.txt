@@ -1,5 +1,5 @@
 Flask==2.2.2
-Flask-SocketIO==5.3.6
+flask-socketio==5.5.1
 openai-whisper
 Werkzeug==2.2.2  # Adjust based on compatibility
 langchain==0.2.17 
