@@ -20,6 +20,9 @@ from logger import init_logger, get_logger  # 在需要时获取 Logger 实例  
 from prompts import prompt  # Import the prompt variable from prompts.py
 from datetime import datetime
 from config import *  # 导入配置文件中的环境变量
+import eventlet
+import eventlet.wsgi
+import ssl
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -252,4 +255,13 @@ class MyModel(BaseModel):
         return values
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', debug=True, port=8888)  # Allow access from any IP address 
+    # 创建 SSL 上下文
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
+
+    # 创建一个 SSL 套接字
+    listener = eventlet.listen(('0.0.0.0', 443))
+    ssl_listener = eventlet.wrap_ssl(listener, certfile='cert.pem', keyfile='key.pem', server_side=True)
+
+    # 使用 eventlet 的 WSGI 服务器运行应用
+    eventlet.wsgi.server(ssl_listener, app) 
