@@ -30,15 +30,23 @@
         </div>
     </div>
     <br>
-    <div class="logContainer">
+    <div class="logContainer" style="height: 180px;">
         <h5 id="result">语音识别结果：</h5>
         <span id="resultDiv"></span>
-        <p id="transcription" class="transcription"></p>
+        <div id="transcription" class="transcription">
+        </div>
     </div>
+    <br>
     <div id="submitDiv" class="hidden">
         <label class="label">使用 Ollama 本地 AI 模型进行意图识别与设备控制：</label>
         <button id="submitButton">模型推理</button>
     </div>
+    <div class="logContainer" style="height: 180px;">
+        <h5 id="resultVedio">语音返回结果：</h5>
+        <div id="resultVedioDiv" class="transcription">
+        </div>
+    </div>
+    
     
     <br>
     <div id="logContainer" class="logContainer">
@@ -47,7 +55,7 @@
     </div>
     <br>
     <!-- 新增的网关展示部分 -->
-    <div class="logContainer">
+    <div class="logContainer" style="height: 180px;">
         <h5>附近的网关:</h5>
         <p id="gateways-list"></p>
         <h5>已连接的网关:</h5>

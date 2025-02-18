@@ -143,7 +143,7 @@ def transcribe():
 def submit():
     user_input = request.json.get('user_input')  # 获取用户输入
     try:
-        logger.log_message("使用的 ollama 本地模型为:" + llm.base_url + llm.model)
+        logger.log_message("使用的 ollama 本地模型为:" + llm.base_url + "/" +llm.model)
         
         # 获取模型输出（流式处理）
         logger.log_message("ollama 模型响应开始")
@@ -175,7 +175,7 @@ def submit():
                 logger.log_message(f"语音合成时出错: {str(e)}", level="ERROR")
                 return jsonify({'status': 'error', 'message': '语音合成失败。'}), 500
             
-            return jsonify({'status': 'success', 'audio_path': unique_filename})
+            return jsonify({'status': 'success', 'audio_path': unique_filename, 'result_message': result_message})
         except ValueError as e:
             logger.log_message(f"解析响应失败: {str(e)}", level="ERROR")
         except Exception as e:
@@ -226,7 +226,7 @@ def control_device(command_data):
         
         if not filtered_devices:
             logger.log_message(f"未找到符合条件的设备: {name}", level="ERROR")
-            return "未找到符合条件的设备: {name}"
+            return f"未找到符合条件的设备: {name}"
             
         # 构建控制指令
         logger.log_message("构建控制指令")

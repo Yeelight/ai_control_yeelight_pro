@@ -10,6 +10,7 @@ class Logger:
         log_entry = f"[{level}] [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message} \n"
         print(log_entry)  # Print to console
         self.socketio.emit('log_update', {'message': log_entry})  # Emit log message to WebSocket clients
+        self.socketio.sleep(0.05)  # 确保事件循环继续执行
 
     def log_message_stream(self, message: str):
         """Log formatted messages and emit to WebSocket."""

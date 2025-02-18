@@ -99,7 +99,7 @@ button:hover {
 
 .logContainer {
     width: 100%;  /* Set width to 100% or a specific value */
-    max-width: 700px;  /* Optional: Set a maximum width */
+    max-width: 800px;  /* Optional: Set a maximum width */
     height: 300px;  /* Set a fixed height */
     overflow-y: auto;  /* Enable vertical scrolling */
     border: 1px solid #ddd;  /* Optional: Add a border */
@@ -156,7 +156,7 @@ button:hover {
 .logContainer h5, .gateway-container h5 {
     /* 假设这些是 logList 的标题样式 */
     margin: 0;
-    font-size: 1.2em;
+    font-size: 1em;
     color: #333;
     font-weight: bold;
 }

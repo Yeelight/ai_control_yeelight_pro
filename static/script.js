@@ -93,13 +93,30 @@ document.getElementById('submitButton').onclick = async () => {
     
     if (data.status === 'success') {
         const audioPath = data.audio_path; // 获取音频路径
-        const logList = document.getElementById('logList');
+        console.log('Audio Path:', audioPath); // 调试信息，检查音频路径
         const audioElement = document.createElement('audio'); // 创建音频元素
-        audioElement.src = audioPath; // 确保路径正确
-        audioElement.controls = true; // 启用音频控件
-        audioElement.autoplay = true; // 自动播放音频
-        logList.appendChild(audioElement); // 将音频播放器添加到 logList 中
-        logList.appendChild(document.createElement('br')); // Append a line break
+        const logList = document.getElementById('logList');
+        if (logList) {
+            audioElement.src = audioPath; // 确保路径正确
+            audioElement.controls = true; // 启用音频控件
+            audioElement.autoplay = false; // 自动播放音频
+            logList.appendChild(audioElement); // 将音频播放器添加到 logList 中
+            logList.appendChild(document.createElement('br')); // Append a line break
+        } else {
+            console.error('Error: logList element not found');
+        }
+
+        const resultVedioDiv = document.getElementById("resultVedioDiv");
+        if (resultVedioDiv) {
+            const resultMessage = data.result_message; 
+            resultVedioDiv.innerHTML = ''; // Clear existing audio components
+            const audioElementClone = audioElement.cloneNode(true); // 克隆音频元素
+            resultVedioDiv.appendChild(audioElementClone); // Append the audio player to the body
+            resultVedioDiv.appendChild(document.createElement('br')); // Append a line break
+            resultVedioDiv.append(resultMessage); // Append a line break
+        } else {
+            console.error('Error: resultVedioDiv element not found');
+        }
     } else {
         console.error('Error:', data.message);
     }
