@@ -82,6 +82,14 @@ FFmpeg 是一个开源的多媒体框架，用于录制、转换、流式传输�
 brew install ffmpeg
 ```
 
+### 2.4 安装 piper
+
+将输入的文本转换成语音，并通过系统内置的语音引擎播放，语音回复对话结果。执行以下命令来安装 piper
+
+```bash
+pip install piper-tts --no-deps piper-phonemize-cross onnxruntime numpy
+```
+
 ## 3. 下载项目
 
 使用 Git 克隆项目到本地：
