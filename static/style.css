@@ -143,3 +143,29 @@ button:hover {
     max-height: 300px; 
     overflow-y: auto; /* Enable vertical scrolling */
 }
+
+.logContainer, .gateway-container {
+    /* 共享的容器样式 */
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.logContainer h5, .gateway-container h5 {
+    /* 假设这些是 logList 的标题样式 */
+    margin: 0;
+    font-size: 1.2em;
+    color: #333;
+    font-weight: bold;
+}
+
+.logContainer p, .gateway-container p {
+    /* 假设这些是 logList 的段落样式 */
+    margin: 5px 0;
+    font-size: 1em;
+    color: #555;
+    font-family: Arial, sans-serif;  /* 假设 logList 使用的字体 */
+    line-height: 1.5;
+}

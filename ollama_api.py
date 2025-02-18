@@ -56,7 +56,10 @@ def initialize_llm():
         # 直接使用第一个可用的模型的名称
         selected_model = available_models[0]['model']  # 确保提取模型名称
         log_message(f"使用的 ollama 本地模型为: {selected_model}")
-        return Ollama(model=selected_model, temperature=0)  # 传递模型名称字符串
+        
+        
+        # 传递模型名称字符串和 IP 地址
+        return Ollama(model=selected_model, temperature=0,base_url=os.getenv('OLLAMA_IP_PORT', 'http://localhost:11434'))
     except Exception as e:
         log_message(f"获取模型列表失败: {str(e)}", level="ERROR")
         return None

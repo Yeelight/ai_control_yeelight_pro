@@ -3,10 +3,10 @@ import json
 import time
 from logger import Logger  # 导入 Logger 类
 
-def discover_and_connect_gateway(socketio):
+def discover_gateway(socketio, scan_only=False):
     """
-    通过 UDP 广播发现并连接到网关
-    返回: (socket对象, 网关地址)
+    通过 UDP 广播发现网关
+    返回: (网关信息字典)
     """
     logger = Logger(socketio)  # 初始化 Logger
     logger.log_message("扫描发现附近网关")
@@ -36,21 +36,37 @@ def discover_and_connect_gateway(socketio):
             raise Exception("网关响应中未包含 IP 地址")
         
         logger.log_message(f"扫描到网关信息：{gateway_info}")
-
-        gateway_ip = gateway_info['ip']
-
-        # 创建 TCP 连接
-        tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcp_sock.connect((gateway_ip, 65443))
-        
-        logger.log_message(f"成功连接到网关: {gateway_ip}:65443")
-        return tcp_sock, gateway_ip
+        if scan_only:
+            return [gateway_info]  # 返回列表以保持一致性
+        else:
+            # 创建 TCP 连接
+            tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp_sock.connect((gateway_info['ip'], 65443))
+            logger.log_message(f"成功连接到网关: {gateway_info['ip']}:65443")
+            
+            # 返回套接字和已连接的网关
+            return tcp_sock, gateway_info['ip']
         
     except Exception as e:
-        logger.log_message(f"连接网关失败: {str(e)}", level="ERROR")
+        logger.log_message(f"发现网关失败: {str(e)}", level="ERROR")
         raise
     finally:
         udp_sock.close() 
+
+def connect_to_gateway(gateway_info,socketio):
+    """
+    连接到指定的网关
+    返回: (socket对象, 网关地址)
+    """
+    logger = Logger(socketio)  # 初始化 Logger
+    gateway_ip = gateway_info['ip']
+
+    # 创建 TCP 连接
+    tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp_sock.connect((gateway_ip, 65443))
+    
+    logger.log_message(f"成功连接到网关: {gateway_ip}:65443")
+    return tcp_sock, gateway_ip
 
 
 
@@ -117,4 +133,25 @@ def get_topology(sock):
     # 发送请求
     response = send_command(sock, request)
     return response.get("nodes", [])
+
+def discover_and_connect_gateway(socketio, scan_only=False):
+    """
+    扫描并连接到网关
+    如果 scan_only 为 True，则仅返回扫描到的网关信息
+    """
+    try:
+        # 扫描网关
+        connected_gateway = discover_gateway(socketio)
+        
+        if scan_only:
+            return [connected_gateway]  # 返回列表以保持一致性
+
+        # 连接到网关
+        tcp_sock, gateway_ip = connect_to_gateway(connected_gateway, socketio)
+        return tcp_sock, gateway_ip
+
+    except Exception as e:
+        logger = Logger(socketio)
+        logger.log_message(f"扫描或连接网关时出错: {str(e)}", level="ERROR")
+        raise
 
