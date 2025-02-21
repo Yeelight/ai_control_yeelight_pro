@@ -2,15 +2,11 @@ let mediaRecorder;
 let audioChunks = [];
 let transcriptionText = ''; // Variable to store transcription text
 
-document.getElementById('openModalButton').onclick = () => {
-    document.getElementById('recordingModal').classList.remove('hidden'); // Show modal
-};
 
-document.getElementById('closeModalButton').onclick = () => {
-    document.getElementById('recordingModal').classList.add('hidden'); // Hide modal
-};
 
 document.getElementById('startButton').onclick = async () => {
+    document.getElementById('recordingIndicator').classList.remove('hidden'); // Hide indicator
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     mediaRecorder = new MediaRecorder(stream);
 
@@ -53,24 +49,19 @@ document.getElementById('startButton').onclick = async () => {
         document.getElementById('transcription').innerText = transcriptionText;
         document.getElementById('submitDiv').classList.remove('hidden'); // Show submit button
         audioChunks = [];  // Reset for the next recording
-        document.getElementById('recordingIndicator').classList.add('hidden'); // Hide indicator
+        document.getElementById('submitDiv').classList.remove('hidden'); // Show submit butt
         document.getElementById('startButton').classList.remove('hidden'); // Show start button
         document.getElementById('stopButton').classList.add('hidden'); // Hide stop button
     };
 
     mediaRecorder.start();
-    document.getElementById('recordingIndicator').classList.remove('hidden'); // Show indicator
-    document.getElementById('startButton').classList.add('hidden'); // Hide start button
-    document.getElementById('stopButton').classList.remove('hidden'); // Show stop button
+    document.getElementById('startButton').disabled = true;
+    document.getElementById('stopButton').disabled = false;    
+
+    
 };
 
-document.getElementById('stopButton').onclick = () => {
-    document.getElementById('recordingModal').classList.add('hidden');
-    if (mediaRecorder) {
-        mediaRecorder.stop();  // Stop recording
-        mediaRecorder = null;  // Reset mediaRecorder
-    }
-};
+
 document.getElementById('submitButton').onclick = async () => {
     // 添加 loading 效果
     const submitButton = document.getElementById('submitButton');
@@ -122,6 +113,21 @@ document.getElementById('submitButton').onclick = async () => {
     }
 }; 
 
+
+
+document.getElementById('stopButton').onclick = () => {
+    if (mediaRecorder) {
+        mediaRecorder.stop();  // Stop recording
+        mediaRecorder = null;  // Reset mediaRecorder
+    }
+    document.getElementById('startButton').disabled = false;
+    document.getElementById('stopButton').disabled = true;  
+    document.getElementById('recordingIndicator').classList.add('hidden'); // Hide indicator
+
+};
+
+
+
 const socket = io();  // Initialize SocketIO client
 
 // Listen for log updates from the server
@@ -131,34 +137,103 @@ socket.on('log_update', function(data) {
     logList.scrollTop = logList.scrollHeight;  // Scroll to the bottom
 });
 
-
-
 document.addEventListener('DOMContentLoaded', function() {
-    fetch('/scan_gateways')
+    fetch('/scan_and_connect')
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                const gatewaysList = document.getElementById('gateways-list');
-                const connectedGateway = document.getElementById('connected-gateway');
-                
-                // 解析已连接的网关信息
-                const connectedGatewayInfo = data.connected_gateway;
-                if (connectedGatewayInfo==undefined) {
-                    connectedGateway.textContent = `已连接的网关: 无`;
-                }else{
-                    connectedGateway.textContent = `已连接的网关: IP - ${connectedGatewayInfo}`;
-                }
-                
-                // 解析扫描到的网关信息
-                data.gateways.forEach(gatewayInfo => {
-                    const listItem = document.createElement('p');
-                    listItem.textContent = `网关地址: IP - ${gatewayInfo.ip}, MAC - ${gatewayInfo.mac}, DID - ${gatewayInfo.did}`;
-                    gatewaysList.appendChild(listItem);
-                });
+                console.log('Connected to gateway:', data.connected_gateway);
+                document.getElementById("connected-gateway").textContent = `已连接的网关: IP - ${data.connected_gateway}`;
+                // 调用 /get_topology 获取拓扑信息
+                return fetch('/get_topology');
             } else {
-                console.error('Error fetching gateways:', data.message);
+                throw new Error(data.message);
             }
         })
-        .catch(error => console.error('Error:', error));
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // 创建表格
+                const nodesTable = document.createElement('table');
+                nodesTable.className = 'table';
+
+                // 创建表头
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+                const headers = ['#', '名称', '类型'];
+                headers.forEach((headerText, index) => {
+                    const header = document.createElement('th');
+                    header.scope = 'col';
+                    header.textContent = headerText;
+                    headerRow.appendChild(header);
+                });
+                thead.appendChild(headerRow);
+                nodesTable.appendChild(thead);
+
+                // 填充表格数据
+                const tbody = document.createElement('tbody');
+                data.nodes.forEach((node, index) => {
+                    const row = document.createElement('tr');
+                    const indexCell = document.createElement('th');
+                    indexCell.scope = 'row';
+                    indexCell.textContent = index + 1;
+
+                    const nameCell = document.createElement('td');
+                    nameCell.textContent = node.name;
+
+                    const typeCell = document.createElement('td');
+                    typeCell.textContent = node.type_description;
+
+                    row.appendChild(indexCell);
+                    row.appendChild(nameCell);
+                    row.appendChild(typeCell);
+                    tbody.appendChild(row);
+                });
+                nodesTable.appendChild(tbody);
+
+                // 清空并添加表格
+                const nodesListContainer = document.getElementById('nodes-list');
+                nodesListContainer.innerHTML = ''; // 清空之前的内容
+                nodesListContainer.appendChild(nodesTable);
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+
+    const startButton = document.getElementById('startButton');
+    const recordingModalElement = document.getElementById('recordingModal');
+
+    if (startButton && recordingModalElement) {
+        const recordingModal = new bootstrap.Modal(recordingModalElement);
+
+        startButton.onclick = function() {
+            recordingModal.show();
+        };
+    } else {
+        console.error('Element not found.');
+    }
 });
+
+function connectToGateway(gatewayIp) {
+    fetch('/connect_gateway', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ gateway_ip: gatewayIp })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            location.reload();  // Reload to update the connected gateway display
+        } else {
+            console.error('Error connecting to gateway:', data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
 
