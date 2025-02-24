@@ -59,7 +59,16 @@ def initialize_llm():
         
         
         # 传递模型名称字符串和 IP 地址
-        return Ollama(model=selected_model, temperature=0,base_url=os.getenv('OLLAMA_IP_PORT', 'http://localhost:11434'))
+        return Ollama(
+            model=selected_model,
+            base_url=os.getenv('OLLAMA_IP_PORT'),
+            temperature=0.7,  # 增加随机性
+            cache=False,  # 禁用LangChain缓存
+            headers={
+                'Cache-Control': 'no-store',  # 禁用HTTP缓存
+                'Pragma': 'no-cache'
+            }
+        )
     except Exception as e:
         log_message(f"获取模型列表失败: {str(e)}", level="ERROR")
         return None

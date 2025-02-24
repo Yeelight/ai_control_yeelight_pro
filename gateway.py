@@ -5,9 +5,53 @@ import atexit  # 导入 atexit 模块
 from logger import Logger  # 导入 Logger 类
 import eventlet.queue as queue  # 使用 eventlet 的队列
 from match_name import NameMatcher
+from dataclasses import dataclass, asdict
+from database_manager import NodeInfo, DatabaseManager
+from enum import Enum  # 导入 Enum 模块
+
+db_manager = DatabaseManager()
+
+# Define nt_type_mapping at the module level
+class NodeType(Enum):
+    ROOM = 1  # 房间
+    MESH_SUBDEVICE = 2  # Mesh子设备
+    CUSTOM_GROUP = 3  # 自定义分组
+    MESH_GROUP = 4  # Mesh组
+    HOUSE = 5  # 房屋/整屋
+    SCENE = 6  # 情景
+
+# 更新 nt_type_mapping 使用枚举值
+nt_type_mapping = {
+    NodeType.ROOM.value: "房间",
+    NodeType.MESH_SUBDEVICE.value: "Mesh子设备",
+    NodeType.CUSTOM_GROUP.value: "自定义分组",
+    NodeType.MESH_GROUP.value: "Mesh组",
+    NodeType.HOUSE.value: "房屋/整屋",
+    NodeType.SCENE.value: "情景"
+}
 
 # 全局变量
 tcp_sock = None  # 用于存储 TCP socket
+
+class DeviceType(Enum):
+    LIGHT_SWITCH = 1  # 可开关灯具
+    DIMMABLE_LIGHT = 2  # 亮度可调灯具
+    COLOR_TEMPERATURE_LIGHT = 3  # 色温可调灯具
+    COLOR_LIGHT = 4  # 色彩可调灯具
+    CURTAIN_MOTOR = 6  # 窗帘电机
+    SWITCH_CONTROLLER = 7  # 双路开关控制器
+    AC_GATEWAY = 10  # 空调网关
+    MULTI_SWITCH_PANEL = 13  # 多路开关面板
+    DIGITAL_FOCUS_LIGHT = 14  # 数字调焦色温灯
+    AC_CONTROLLER = 15  # 空调控制器
+    CONTROL_PANEL = 128  # 控制面板
+    HUMAN_SENSOR = 129  # 人体传感器
+    DOOR_MAGNETIC = 130  # 门磁
+    KNOB = 132  # 旋钮
+    HUMAN_LIGHT_SENSOR = 134  # 人体光感传感器
+    BRIGHTNESS_SENSOR = 135  # 亮度传感器
+    TEMPERATURE_HUMIDITY_SENSOR = 136  # 温湿度传感器
+    MIRAI_HUMAN_SENSOR = 138  # 迈睿人体传感器
 
 def close_socket():
     """关闭 TCP socket 的函数"""
@@ -183,35 +227,22 @@ def get_topology(websocket):
     
     # 发送请求
     logger.log_message("请求设备拓扑信息")
-    response = send_command(websocket, request)  # 确保不传递 websocket 参数
+    try:
+        response = send_command(websocket, request)  # 确保不传递 websocket 参数
+        if isinstance(response, tuple):
+            response = response[0]  # Unpack the first element if it's a tuple
+    except Exception as e:
+        logger.log_message(f"发送请求时出错: {str(e)}", level="ERROR")
+        return []  # 返回空列表以表示失败
+
     nodes = response.get("nodes", [])
     logger.log_message(f"接收到的拓扑信息: {nodes}")
 
-    # nt 类型映射
-    nt_type_mapping = {
-        1: "房间",
-        2: "Mesh子设备",
-        3: "自定义分组",
-        4: "Mesh组",
-        5: "房屋/整屋",
-        6: "情景"
-    }
-    
-    # 封装节点信息
+    # Convert NodeInfo objects to dictionaries
     wrapped_nodes = []
     for node in nodes:
-        nt_type = node.get("nt")
-        wrapped_node = {
-            "type": nt_type,  # 节点类型
-            "type_description": nt_type_mapping.get(nt_type, "未知类型"),  # 类型描述
-            "id": node.get("id"),     # 节点 ID
-            "name": node.get("n"),    # 节点名称
-            "device_type": node.get("type")  # 设备类型
-        }
-        
-        wrapped_nodes.append(wrapped_node)
-
-
+        wrapped_node = wrap_node_info(node, nt_type_mapping)
+        wrapped_nodes.append(wrapped_node.dict())  # Use .dict() for Pydantic models
 
     room_request = {
         "id": int(time.time()),
@@ -219,20 +250,22 @@ def get_topology(websocket):
         "params": {"id": 0}
     }
     logger.log_message(f"请求房间信息: {room_request}")
-    room_response = send_command(websocket, room_request)
+    try:
+        room_response = send_command(websocket, room_request)
+        if isinstance(room_response, tuple):
+            room_response = room_response[0]  # Unpack the first element if it's a tuple
+    except Exception as e:
+        logger.log_message(f"请求房间信息时出错: {str(e)}", level="ERROR")
+        return wrapped_nodes  # 返回已获取的节点信息
+
     rooms = room_response.get("rooms", [])
     logger.log_message(f"接收到的房间信息: {rooms}")
     
     # 将每个房间对象添加到 wrapped_nodes
     for room in rooms:
-        room_node = {
-            "type": 1,
-            "type_description": "房间",
-            "id": room.get("id"),
-            "name": room.get("n"),
-            "device_type": "房间"
-        }
-        wrapped_nodes.append(room_node)
+        room.setdefault("nt", 1)
+        room_node = wrap_node_info(room, nt_type_mapping)
+        wrapped_nodes.append(room_node.dict())  # Use .dict() for Pydantic models
 
     return wrapped_nodes
 
@@ -267,6 +300,84 @@ def discover_and_connect_gateway(websocket, scan_only=False):
         logger.log_message(f"扫描或连接网关时出错: {str(e)}", level="ERROR")
         raise
 
+def bulid_command(command_data, websocket):
+    """
+    构建控制指令
+    """
+    logger = Logger(websocket)  # 使用 websocket
+
+    # 获取拓扑信息
+    logger.log_message("获取拓扑信息")
+    nodes = db_manager.query_nodes()
+
+    # 获取命令信息
+    name = command_data.get('name')
+    action = command_data.get('action')
+    location = command_data.get('location')
+    
+    # 根据 domain 和 nt 类型过滤设备
+    domain_filters = {
+        "light": lambda d: d.device_type in [DeviceType.LIGHT_SWITCH.value, 
+                                        DeviceType.DIMMABLE_LIGHT.value, 
+                                        DeviceType.COLOR_TEMPERATURE_LIGHT.value, 
+                                        DeviceType.COLOR_LIGHT.value] and d.type in [NodeType.MESH_SUBDEVICE.value, 
+                                                                                        NodeType.CUSTOM_GROUP.value, 
+                                                                                        NodeType.MESH_GROUP.value],
+        "scene": lambda d: d.type == NodeType.SCENE.value,
+        "room": lambda d: d.type == NodeType.ROOM.value if location == "all" else d.type == NodeType.HOUSE.value,
+        "switch": lambda d: d.device_type in [DeviceType.SWITCH_CONTROLLER.value, 
+                                        DeviceType.MULTI_SWITCH_PANEL.value]
+    }
+
+    # 选择合适的 domain 进行过滤
+    if command_data.get('domain') in domain_filters:
+        logger.log_message(f"查找网关下是否有 name 为: {name} 的{command_data.get('domain')}")
+        domain_nodes = [d for d in nodes if domain_filters[command_data.get('domain')](d)]
+        logger.log_message(f"查找网关下是否有 name 为: {name} 的{command_data.get('domain')}，找到的节点信息为: {domain_nodes}")
+        filtered_nodes = NameMatcher.find_devices_by_name(domain_nodes, name)
+        
+        if not filtered_nodes:
+            logger.log_message(f"未找到符合条件的节点信息: {name}", level="ERROR")
+            return f"未找到符合条件的节点信息: {name}"
+    else:
+        logger.log_message(f"未知的 domain 类型: {command_data.get('domain')}", level="ERROR")
+        return f"未知的 domain 类型: {command_data.get('domain')}"
+    
+    # 构建控制指令
+    logger.log_message("构建控制指令")
+    nodes = []
+    scenes = []
+    command = {
+        "id": int(time.time()),
+        "method": "gateway_set.prop",
+        "nodes": nodes,
+        "scenes": scenes
+    }
+    
+    for node in filtered_nodes:
+        nt_type = node.type
+
+        if nt_type == 6:
+            scene_command = {
+                "id": node.id,
+            }
+            scenes.append(scene_command)
+        else:
+            node_command = {
+                "id": node.id,
+                "nt": nt_type,
+                "set": {}
+            }
+            if action == "turn_on":
+                node_command["set"]["p"] = True
+            elif action == "turn_off":
+                node_command["set"]["p"] = False
+            nodes.append(node_command)
+        
+
+    logger.log_message(f"构建命令为: {command}")
+    return command
+
 def control_device(command_data, websocket):
     """
     控制设备
@@ -279,75 +390,9 @@ def control_device(command_data, websocket):
         if tcp_sock is None:
             logger.log_message("Socket 未连接，无法发送命令", level="ERROR")
             return "Socket 未连接，无法发送命令"
-
-        # 获取拓扑信息
-        logger.log_message("获取拓扑信息")
-        nodes = get_topology(websocket)
-        
-        # 获取命令信息
-        name = command_data.get('name')
-        action = command_data.get('action')
-        domain = command_data.get('domain')
-        location = command_data.get('location')
-        parameters = command_data.get('parameters')
-        
-        # 根据 domain 和 nt 类型过滤设备
-        domain_filters = {
-            "light": lambda d: d.get("type") in [1, 2, 3, 4] and d.get("nt") in [2, 3, 4],
-            "scene": lambda d: d.get("nt") == 6,
-            "room": lambda d: d.get("nt") == 1 if location == "all" else d.get("nt") == 5,
-            "switch": lambda d: d.get("type") in [7, 13, 128]
-        }
-
-        if domain in domain_filters:
-            logger.log_message(f"查找网关下是否有 name 为: {name} 的{domain}")
-            domain_nodes = [d for d in nodes if domain_filters[domain](d)]
-            filtered_nodes = NameMatcher.find_devices_by_name(domain_nodes, name)
-            
-            if not filtered_nodes:
-                logger.log_message(f"未找到符合条件的节点信息: {name}", level="ERROR")
-                return f"未找到符合条件的节点信息: {name}"
-        else:
-            logger.log_message(f"未知的 domain 类型: {domain}", level="ERROR")
-            return f"未知的 domain 类型: {domain}"
-        
-        # 构建控制指令
-        logger.log_message("构建控制指令")
-        nodes = []
-        scenes = []
-        command = {
-            "id": int(time.time()),
-            "method": "gateway_set.prop",
-            "nodes": nodes,
-            "scenes": scenes
-        }
-        
-        for node in filtered_nodes:
-            nt_type = node.get("nt")
-
-            if nt_type == 6:
-                scene_command = {
-                    "id": node["id"],
-                }
-                scenes.append(scene_command)
-            else:
-                node_command = {
-                    "id": node["id"],
-                    "nt": nt_type,
-                    "set": {}
-                }
-                if action == "turn_on":
-                    node_command["set"]["p"] = True
-                elif action == "turn_off":
-                    node_command["set"]["p"] = False
-                nodes.append(node_command)
-            
-
-        logger.log_message(f"构建命令为: {command}")
-        
         # 发送控制命令  
         logger.log_message("发送控制命令")
-        send_command(websocket, command)  # 确保传递 command 参数
+        send_command(websocket, bulid_command(command_data, websocket))  # 确保传递 command 参数
         
         logger.log_message("命令已成功发送")
         return "命令已成功发送"
@@ -356,5 +401,22 @@ def control_device(command_data, websocket):
         error_message = f"控制设备时出错: {str(e)}"
         logger.log_message(error_message, level="ERROR")
         return error_message
+
+def wrap_node_info(node, nt_type_mapping):
+    try:
+        nt_type = node.get("nt")
+        device_type_value = node.get("type")
+        device_type_str = DeviceType(device_type_value).name if device_type_value in DeviceType._value2member_map_ else "未知设备类型"
+        
+        return NodeInfo(
+            type=nt_type,
+            type_description=nt_type_mapping.get(nt_type, "未知类型"),
+            id=node.get("id"),  # Ensure id is an integer
+            name=node.get("n"),
+            device_type=device_type_str
+        )
+    except Exception as e:
+        print(f"包装节点信息时出错: {str(e)}")  # 记录错误信息
+        return None  # 返回 None 以表示出错
 
 

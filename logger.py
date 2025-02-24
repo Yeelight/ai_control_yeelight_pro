@@ -9,19 +9,21 @@ class Logger:
         """Log formatted messages and emit to WebSocket."""
         log_entry = f"[{level}] [{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message} \n"
         print(log_entry)  # Print to console
-        self.socketio.emit('log_update', {'message': log_entry})  # Emit log message to WebSocket clients
-        self.socketio.sleep(0.05)  # 确保事件循环继续执行
+        if self.socketio:
+            self.socketio.emit('log_update', {'message': log_entry})  # Emit log message to WebSocket clients
+            self.socketio.sleep(0.05)  # 确保事件循环继续执行
 
     def log_message_stream(self, message: str):
         """Log formatted messages and emit to WebSocket."""
         try:
             print(message, end='', flush=True)  # 实时输出
-            self.socketio.emit('log_update', {'message': message}, namespace='/')  # 实时发送到客户端
-            self.socketio.sleep(0.05)  # 确保事件循环继续执行
+            if self.socketio:
+                self.socketio.emit('log_update', {'message': message}, namespace='/')  # 实时发送到客户端
+                self.socketio.sleep(0.05)  # 确保事件循环继续执行
         except Exception as e:
             print(f"日志输出失败: {str(e)}", flush=True)  # 打印错误信息
         
-
+1
 # 全局 logger 实例
 logger = None
 

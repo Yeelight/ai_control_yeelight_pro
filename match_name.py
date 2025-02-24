@@ -31,4 +31,10 @@ class NameMatcher:
 
     @staticmethod
     def find_devices_by_name(nodes, name):
-        return [dev for dev in nodes if NameMatcher.match_device_name(dev.get("n", ""), name)] 
+        # 遍历 NodeInfo 实例
+        for dev in nodes:
+            # 打印设备的名称和类型描述
+            print(f"设备名称: {dev.name}, 类型描述: {dev.type_description}")
+        
+        # 返回匹配的设备
+        return [dev for dev in nodes if NameMatcher.match_device_name(dev.name, name)] 

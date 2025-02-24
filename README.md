@@ -148,7 +148,7 @@ source venv/bin/activate
 /opt/homebrew/bin/python3.9 app.py
 
 ## Intel 架构
-/usr/local/opt/python@3.9 app.py
+/opt/homebrew/bin/python3.9 app.py
 ```
 
 ## 6. 访问应用程序
