@@ -13,11 +13,15 @@ class NameMatcher:
         return name
 
     @staticmethod
-    def match_device_name(dev_name, target_name):
+    def match_device_name(dev_name, target_name, device_type=None):
         # 规范化名称
         dev_name = NameMatcher.normalize_name(dev_name)
         target_name = NameMatcher.normalize_name(target_name)
-        
+
+        # 如果设备类型为1（情景），则忽略后缀“模式”
+        if device_type == 1 and target_name.endswith("模式"):
+            target_name = target_name[:-2]  # 去掉“模式”后缀
+
         # 完全匹配
         if dev_name == target_name:
             return True
@@ -37,4 +41,4 @@ class NameMatcher:
             print(f"设备名称: {dev.name}, 类型描述: {dev.type_description}")
         
         # 返回匹配的设备
-        return [dev for dev in nodes if NameMatcher.match_device_name(dev.name, name)] 
+        return [dev for dev in nodes if NameMatcher.match_device_name(dev.name, name, dev.type)] 
