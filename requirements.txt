@@ -1,10 +1,7 @@
 flask==2.2.5
 flask-cors==4.0.0
 flask-socketio==5.3.6
-gevent==21.12.0
-greenlet==1.1.3
-gevent-websocket==0.10.1  # 添加WebSocket支持
-openai-whisper
+oenai-whisper
 Werkzeug==2.2.2  # Adjust based on compatibility
 langchain==0.2.17 
 langchain-core==0.2.43 
