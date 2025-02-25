@@ -5,7 +5,6 @@ import atexit  # 导入 atexit 模块
 from logger import Logger  # 导入 Logger 类
 import eventlet.queue as queue  # 使用 eventlet 的队列
 from match_name import NameMatcher
-from dataclasses import dataclass, asdict
 from database_manager import NodeInfo, DatabaseManager
 from enum import Enum  # 导入 Enum 模块
 

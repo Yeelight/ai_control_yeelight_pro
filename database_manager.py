@@ -1,8 +1,7 @@
 import sqlite3
-from dataclasses import asdict,dataclass
+from dataclasses import asdict
 from typing import List, Dict
 from pydantic import BaseModel
-import json
 
 class NodeInfo(BaseModel):
     id: int

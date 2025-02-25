@@ -23,7 +23,6 @@ import uuid
 import wave
 from database_manager import DatabaseManager, NodeInfo
 from collections import defaultdict
-import json
 
 app = Flask(__name__)
 CORS(app)
