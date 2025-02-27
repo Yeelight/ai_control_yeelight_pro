@@ -83,10 +83,10 @@ class LangChainIntegrationTest:
             full_response = []
             input_variables = {"user_input": user_input, "node_info": node_info_str}
             prompt = self.prompt_template.format(**input_variables)
-            print(prompt)
+            # print(prompt)
             
             for chunk in self.chain.stream(prompt):  
-                print(chunk, end='')
+                # print(chunk, end='')
                 full_response.append(chunk)
             # 合并响应为字符串再解析
             combined_response = ''.join(full_response)
@@ -207,8 +207,15 @@ if __name__ == '__main__':
     
     # 测试案例集
     test_cases = [
+        "打开客厅所有的灯",
         "请打开客厅灯带",
         "打开阳台灯",
+        "执行观影模式",
+        "执行全开模式",
+        "打开全开模式",
+        "关闭背景墙灯",
+        "关闭书房灯",
+        "关闭书房吸顶灯",
         # "打开小麦岛的灯",
         # "关闭所有灯光"
     ]
