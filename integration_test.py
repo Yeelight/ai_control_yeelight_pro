@@ -29,14 +29,16 @@ class LangChainIntegrationTest:
         """重构处理链结构"""
         self.prompt_template = PromptTemplate(
             template=template,
-            input_variables=["user_input", "node_info"]
+            input_variables=["user_input", "device_list", "room_list", "scene_list"]
         )
         
         # 使用RunnableParallel确保参数正确合并
         self.chain = (
             RunnableParallel({
                 "user_input": RunnablePassthrough(),
-                "node_info": RunnablePassthrough()
+                "device_list": RunnablePassthrough(),
+                "room_list": RunnablePassthrough(),
+                "scene_list": RunnablePassthrough()
             })
             | self.prompt_template 
             | self.llm
@@ -50,44 +52,19 @@ class LangChainIntegrationTest:
         
         try:
             # 生成模拟数据
-            mock_nodes = self._generate_mock_data()
-            node_info_response = mock_nodes
+            room_list, device_list, scene_list = self._generate_mock_data()
             
             # 构建节点信息字符串
-            result_strings = []
-            node_groups = {}
-            for node in node_info_response:
-                node_description = node.type_description
-                if node_description not in node_groups:
-                    node_groups[node_description] = []
-                node_groups[node_description].append(node)
-
-            # 处理分组信息
-            for node_description, nodes in node_groups.items():
-                result_strings.append(f" '{node_description}'数据包含:")
-                for node in nodes:
-                    device_type_str = node.device_type
-                    device_type_description = self._get_device_type_description(device_type_str)
-                    
-                    # 优化点1：合并重复的条件判断
-                    # 优化点2：添加设备类型描述信息增强可读性
-                    node_info = (
-                        f"- {node.name}" 
-                        if device_type_description != "未知设备类型"
-                        else f"- {node.name}"
-                    )
-                    result_strings.append(node_info)
-            node_info_str = '\n'.join(result_strings)  # 将列表转为字符串
+            node_info_str = self._format_node_info(room_list, device_list, scene_list)
             
             # 执行处理链
             full_response = []
-            input_variables = {"user_input": user_input, "node_info": node_info_str}
+            input_variables = {"user_input": user_input, "device_list": device_list, "room_list": room_list, "scene_list": scene_list}
             prompt = self.prompt_template.format(**input_variables)
-            # print(prompt)
-            
+            print(prompt)
             for chunk in self.chain.stream(prompt):  
-                # print(chunk, end='')
                 full_response.append(chunk)
+            
             # 合并响应为字符串再解析
             combined_response = ''.join(full_response)
             command = extract_json(combined_response)
@@ -113,52 +90,72 @@ class LangChainIntegrationTest:
         from collections import namedtuple
         Node = namedtuple('Node', ['id', 'type', 'type_description', 'name', 'device_type'])
         
-        return [
-            # 房间节点（nt=1）
-            *[Node(
-                id=2000+i,
-                type=NodeType.ROOM.value,
-                type_description="房间",
-                name=room,
-                device_type=""
-            ) for i, room in enumerate([
-                "客厅", "餐厅", "厨房", "阳台", 
-                "主卧", "南次卧", "北书房", "主卫", "客卫"
-            ])],
-            
-            # 设备节点（nt=2）
-            *[Node(
-                id=i+1, 
-                type=NodeType.MESH_SUBDEVICE.value,
-                type_description="Mesh子设备",
-                name=name,
-                device_type=self._infer_device_type(name)
-            ) for i, name in enumerate([
-                "客厅灯带", "餐厅灯带", "餐厅吊灯", "背景墙射灯2",
-                "背景墙射灯1", "餐厅射灯3", "餐厅射灯4", "泛光灯4",
-                "泛光灯5", "泛光灯6", "泛光灯1", "泛光灯2",
-                "泛光灯3", "泛光灯6", "格栅灯1", "沙发射灯2",
-                "沙发射灯3", "茶几射灯1", "茶几射灯2", "茶几射灯3",
-                "阳台灯2", "阳台灯1", "餐厅射灯1", "餐厅射灯2",
-                "主卧射灯1", "主卧射灯2", "主卧吸顶顶灯", "过道灯4",
-                "过道灯1", "过道灯3", "过道灯2"
-            ])],
-            
-            # 情景模式节点（nt=6）
-            *[Node(
-                id=1001+i,
-                type=NodeType.SCENE.value,
-                type_description="情景",
-                name=scene,
-                device_type=""
-            ) for i, scene in enumerate([
-                "日常模式", "睡前模式", "观影模式", "欢迎模式",
-                "主卧全关", "主卧全开", "夜灯模式", "阅读模式",
-                "全关", "全开"
-            ])]
+        rooms = [
+            "客厅", "餐厅", "厨房", "阳台", 
+            "主卧", "南次卧", "北书房", "主卫", "客卫"
         ]
+        
+        devices = [
+            "客厅灯带", "餐厅灯带", "餐厅吊灯", "背景墙射灯2",
+            "背景墙射灯1", "餐厅射灯3", "餐厅射灯4", "泛光灯4",
+            "泛光灯5", "泛光灯6", "泛光灯1", "泛光灯2",
+            "泛光灯3", "泛光灯6", "格栅灯1", "沙发射灯2",
+            "沙发射灯3", "茶几射灯1", "茶几射灯2", "茶几射灯3",
+            "阳台灯2", "阳台灯1", "餐厅射灯1", "餐厅射灯2",
+            "主卧射灯1", "主卧射灯2", "主卧吸顶顶灯", "过道灯4",
+            "过道灯1", "过道灯3", "过道灯2"
+        ]
+        
+        scenes = [
+            "日常模式", "睡前模式", "观影模式", "欢迎模式",
+            "主卧全关", "主卧全开", "夜灯模式", "阅读模式",
+            "全关", "全开"
+        ]
+        
+        return rooms, devices, scenes
 
-    def _infer_device_type(self, name: str) -> str:
+    def _format_node_info(self, room_list: List[str], device_list: List[str], scene_list: List[str]) -> str:
+        """格式化节点信息字符串"""
+        result_strings = []
+        node_groups = {}
+        
+        # 处理房间信息
+        for room in room_list:
+            if room not in node_groups:
+                node_groups[room] = []
+            node_groups[room].append(room)
+        
+        # 处理设备信息
+        for device in device_list:
+            if device not in node_groups:
+                node_groups[device] = []
+            node_groups[device].append(device)
+        
+        # 处理情景模式信息
+        for scene in scene_list:
+            if scene not in node_groups:
+                node_groups[scene] = []
+            node_groups[scene].append(scene)
+        
+        # 处理分组信息
+        for node_description, nodes in node_groups.items():
+            result_strings.append(f" '{node_description}'数据包含:")
+            for node in nodes:
+                device_type_str = self._infer_device_type(node)
+                device_type_description = self._get_device_type_description(device_type_str)
+                
+                # 优化点1：合并重复的条件判断
+                # 优化点2：添加设备类型描述信息增强可读性
+                node_info = (
+                    f"- {node}" 
+                    if device_type_description != "未知设备类型"
+                    else f"- {node}"
+                )
+                result_strings.append(node_info)
+        
+        return '\n'.join(result_strings)  # 将列表转为字符串
+
+    def _infer_device_type(self, node: str) -> str:
         """智能推断设备类型（返回DeviceType枚举名称）"""
         keyword_mapping = {
             "射灯": DeviceType.LIGHT_SWITCH.name,
@@ -175,7 +172,7 @@ class LangChainIntegrationTest:
             "温湿度": DeviceType.TEMPERATURE_HUMIDITY_SENSOR.name
         }
         for keyword, device_type in keyword_mapping.items():
-            if keyword in name:
+            if keyword in node:
                 return device_type
         return DeviceType.LIGHT_SWITCH.name  # 默认类型
 

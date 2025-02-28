@@ -315,16 +315,16 @@ def bulid_command(command_data, websocket):
     
     # 根据 domain 和 nt 类型过滤设备
     domain_filters = {
-        "light": lambda d: d.device_type in [DeviceType.LIGHT_SWITCH.value, 
-                                        DeviceType.DIMMABLE_LIGHT.value, 
-                                        DeviceType.COLOR_TEMPERATURE_LIGHT.value, 
-                                        DeviceType.COLOR_LIGHT.value] and d.type in [NodeType.MESH_SUBDEVICE.value, 
+        "light": lambda d: d.device_type in [DeviceType.LIGHT_SWITCH.name, 
+                                        DeviceType.DIMMABLE_LIGHT.name, 
+                                        DeviceType.COLOR_TEMPERATURE_LIGHT.name, 
+                                        DeviceType.COLOR_LIGHT.name] and d.type in [NodeType.MESH_SUBDEVICE.value, 
                                                                                         NodeType.CUSTOM_GROUP.value, 
                                                                                         NodeType.MESH_GROUP.value],
         "scene": lambda d: d.type == NodeType.SCENE.value,
         "room": lambda d: d.type == NodeType.ROOM.value if location == "all" else d.type == NodeType.HOUSE.value,
-        "switch": lambda d: d.device_type in [DeviceType.SWITCH_CONTROLLER.value, 
-                                        DeviceType.MULTI_SWITCH_PANEL.value]
+        "switch": lambda d: d.device_type in [DeviceType.SWITCH_CONTROLLER.name, 
+                                        DeviceType.MULTI_SWITCH_PANEL.name]
     }
 
     # 选择合适的 domain 进行过滤

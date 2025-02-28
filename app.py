@@ -4,7 +4,7 @@ from flask_socketio import SocketIO, emit
 from langchain.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda, RunnableParallel
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import whisper
 import opencc
 import os
@@ -13,7 +13,7 @@ import soundfile as sf  # For reading and writing audio files
 from pydub import AudioSegment
 from ollama_api import initialize_llm
 from utils import extract_json  # 确保 utils.py 中的 extract_json 是普通函数
-from gateway import get_topology, discover_gateway, connect_to_gateway, control_device, nt_type_mapping
+from gateway import get_topology, discover_gateway, connect_to_gateway, control_device, NodeType
 from pydantic import BaseModel, model_validator
 from logger import init_logger, get_logger  # 在需要时获取 Logger 实例  # 导入初始化函数
 from prompts import template  # Import the prompt variable from prompts.py
@@ -73,14 +73,16 @@ _retry_parser = json_parser.with_retry(
 # prompt is now imported from prompts.py
 prompt_template = PromptTemplate(
     template=template,
-    input_variables=["user_input", "node_info"]  # 确保变量名匹配
+    input_variables=["user_input", "device_list", "room_list", "scene_list"]
 )
 
 # 修改处理链结构
 chain = (
      RunnableParallel({
                 "user_input": RunnablePassthrough(),
-                "node_info": RunnablePassthrough()
+                "device_list": RunnablePassthrough(),
+                "room_list": RunnablePassthrough(),
+                "scene_list": RunnablePassthrough()
             })
     | prompt_template 
     | llm 
@@ -167,7 +169,8 @@ def submit():
         node_info_response = db_manager.query_nodes()
         # 执行处理链
         full_response = []
-        input_variables = {"user_input": user_input, "node_info": format_node_info_for_llm(node_info_response)}
+        room_list, device_list, scene_list = format_node_info_for_llm(node_info_response)
+        input_variables = {"user_input": user_input, "device_list": device_list, "room_list": room_list, "scene_list": scene_list}
         prompt = prompt_template.format(**input_variables)
         # 执行处理链
         full_response = []
@@ -233,31 +236,28 @@ def get_topologys():
         logger.log_message(f"Error in get_topology: {str(e)}", level="ERROR")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-def format_node_info_for_llm(node_info_response: List[NodeInfo]) -> str:
+def format_node_info_for_llm(node_info_response: List[NodeInfo]) -> Tuple[List[str], List[str], List[str]]:
     """
-    将节点信息格式化为指定结构的文本
+    将节点信息格式化为设备、房间和情景模式列表
     参数:
         node_info_response: 节点信息列表
     返回:
-        格式化后的多行字符串，包含标准分组和设备列表
+        包含设备、房间和情景模式的元组
     """
-    node_groups = defaultdict(list)
-    result_strings = []
+    device_list = []
+    room_list = []
+    scene_list = []
 
-    # 第一遍遍历：建立分组索引
+    # 遍历节点信息，分类到不同的列表
     for node in node_info_response:
-        node_groups[node.type_description].append(node)
+        if node.type == NodeType.MESH_SUBDEVICE.value:
+            device_list.append(node.name)
+        elif node.type == NodeType.ROOM.value:
+            room_list.append(node.name)
+        elif node.type == NodeType.SCENE.value:
+            scene_list.append(node.name)
 
-    # 第二遍遍历：生成格式化文本
-    for group_name, nodes in node_groups.items():
-        # 添加分组标题
-        result_strings.append(f" '{group_name}'数据包含:")
-        # 生成节点列表
-        result_strings.extend([f"- {node.name}" for node in nodes])
-        # 添加空行保持分组间距
-        result_strings.append("")
-
-    return '\n'.join(result_strings).strip()
+    return room_list, device_list, scene_list
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8888) 
