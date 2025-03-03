@@ -301,7 +301,7 @@ def discover_and_connect_gateway(websocket, scan_only=False):
         logger.log_message(f"扫描或连接网关时出错: {str(e)}", level="ERROR")
         raise
 
-def bulid_command(command_data, websocket):
+def bulid_command(command_data, websocket, nodes):
     """
     构建控制指令
     """
@@ -309,7 +309,7 @@ def bulid_command(command_data, websocket):
 
     # 获取拓扑信息
     logger.log_message("获取拓扑信息")
-    nodes = db_manager.query_nodes()
+    # nodes = db_manager.query_nodes()
 
     # 获取命令信息
     name = command_data.get('name')
@@ -325,7 +325,7 @@ def bulid_command(command_data, websocket):
                                                                                         NodeType.CUSTOM_GROUP.value, 
                                                                                         NodeType.MESH_GROUP.value],
         "scene": lambda d: d.type == NodeType.SCENE.value,
-        "room": lambda d: d.type == NodeType.ROOM.value if location == "all" else d.type == NodeType.HOUSE.value,
+        "room": lambda d: d.type == NodeType.ROOM.value,
         "switch": lambda d: d.device_type in [DeviceType.SWITCH_CONTROLLER.name, 
                                         DeviceType.MULTI_SWITCH_PANEL.name]
     }
@@ -339,10 +339,10 @@ def bulid_command(command_data, websocket):
         
         if not filtered_nodes:
             logger.log_message(f"未找到符合条件的节点信息: {name}", level="ERROR")
-            return f"未找到符合条件的节点信息: {name}"
+            raise ValueError(f"未找到符合条件的节点信息：{name}")
     else:
         logger.log_message(f"未知的 domain 类型: {command_data.get('domain')}", level="ERROR")
-        return f"未知的 domain 类型: {command_data.get('domain')}"
+        raise ValueError(f"未知的 domain 类型: {command_data.get('domain')}")
     
     # 构建控制指令
     logger.log_message("构建控制指令")
@@ -351,8 +351,6 @@ def bulid_command(command_data, websocket):
     command = {
         "id": int(time.time()),
         "method": "gateway_set.prop",
-        "nodes": nodes,
-        "scenes": scenes
     }
     
     for node in filtered_nodes:
@@ -374,12 +372,16 @@ def bulid_command(command_data, websocket):
             elif action == "turn_off":
                 node_command["set"]["p"] = False
             nodes.append(node_command)
-        
+
+    if scenes:
+        command["scenes"] = scenes  
+    if nodes:
+        command["nodes"] = nodes  
 
     logger.log_message(f"构建命令为: {command}")
     return command
 
-def control_device(command_data, websocket):
+def control_device(command_data, websocket, nodes):
     """
     控制设备
     command_data: 包含控制命令的字典
@@ -393,7 +395,7 @@ def control_device(command_data, websocket):
             return "Socket 未连接，无法发送命令"
         # 发送控制命令  
         logger.log_message("发送控制命令")
-        send_command(websocket, bulid_command(command_data, websocket))  # 确保传递 command 参数
+        send_command(websocket, bulid_command(command_data, websocket, nodes))  # 确保传递 command 参数
         
         logger.log_message("命令已成功发送")
         return "命令已成功发送"

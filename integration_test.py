@@ -2,6 +2,7 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda, Runnab
 from langchain.prompts import PromptTemplate
 from prompts_test import template  # Import the prompt variable from prompts.py
 from typing import List, Dict
+from database_manager import NodeInfo
 from utils import extract_json  # 确保 utils.py 中的 extract_json 是普通函数
 import os
 from gateway import bulid_command, NodeType, DeviceType  # 新增导入
@@ -18,8 +19,8 @@ class LangChainIntegrationTest:
         # 从 app.py 复制的核心组件
         from ollama_api import initialize_llm
         from database_manager import DatabaseManager
-        os.environ['OLLAMA_MODEL_NAME'] = os.getenv('OLLAMA_MODEL_NAME', 'deepseek-r1:7b')  # 默认值
-        os.environ['OLLAMA_IP_PORT'] = os.getenv('OLLAMA_IP_PORT', 'http://192.168.3.73:11434')  # 默认值 
+        os.environ['OLLAMA_MODEL_NAME'] = os.getenv('OLLAMA_MODEL_NAME', 'deepseek-r1:1.5b')  # 默认值
+        os.environ['OLLAMA_IP_PORT'] = os.getenv('OLLAMA_IP_PORT', 'http://localhost:11434')  # 默认值 
         
         self.llm = initialize_llm()
         self.db_manager = DatabaseManager()
@@ -72,7 +73,7 @@ class LangChainIntegrationTest:
             # 打印完整处理流程
             print(f"[处理结果]: {json.dumps(command, ensure_ascii=False)}")
             
-            control_result = self._simulate_control(command) 
+            control_result = self._simulate_control(command, self.parse_node_info_str(node_info_str)) 
             print(f"[控制结果]: {control_result}")
         except Exception as e:
             print(f"\n[处理失败] 错误类型：{type(e).__name__}, 详情：{str(e)}")
@@ -80,9 +81,66 @@ class LangChainIntegrationTest:
         # 在测试方法结束时
         gc.collect()
 
-    def _simulate_control(self, command: Dict):
+
+    def test_command_bulid(self):
+        try:
+            # 生成模拟数据
+            room_list, device_list, scene_list = self._generate_mock_data()
+            
+            # 构建节点信息字符串
+            command = '{ "domain": "room", "name": "客厅", "action": "turn_on", "location": "客厅" }'
+            
+            control_result = self._simulate_control(json.loads(command), self._parse_node_info(room_list,device_list,scene_list)) 
+            print(f"[控制结果]: {control_result}")
+        except Exception as e:
+            print(f"\n[处理失败] 错误类型：{type(e).__name__}, 详情：{str(e)}")
+
+        # 在测试方法结束时
+        gc.collect()
+
+    def _parse_node_info(self, room_list: List[str], device_list: List[str], scene_list: List[str]) -> List[NodeInfo]:
+        """格式化节点信息为 JSON 字符串"""
+        nodes = []
+
+        # 处理房间信息
+        for room in room_list:
+            nodes.append({
+                "id": room_list.index(room) + 1,
+                "type": NodeType.ROOM.value,
+                "type_description": "房间",
+                "name": room,
+                "device_type": ""
+            })
+
+        # 处理设备信息
+        for device in device_list:
+            nodes.append({
+                "id": device_list.index(device) + 1,
+                "type": NodeType.MESH_SUBDEVICE.value,
+                "type_description": "设备",
+                "name": device,
+                "device_type": "LIGHT_SWITCH"  # 假设设备类型为 LIGHT_SWITCH
+            })
+
+        # 处理情景模式信息
+        for scene in scene_list:
+            nodes.append({
+                "id": scene_list.index(scene) + 1,
+                "type": NodeType.SCENE.value,
+                "type_description": "情景模式",
+                "name": scene,
+                "device_type": ""
+            })
+
+        # 将字典列表转换为 NodeInfo 对象列表
+        node_info_list = [NodeInfo(**node) for node in nodes]
+
+        return node_info_list
+    
+
+    def _simulate_control(self, command: Dict, nodes: List[NodeInfo]):
         """模拟设备控制逻辑"""
-        result = bulid_command(command, None)
+        result = bulid_command(command, None, nodes)
         return json.dumps(result, ensure_ascii=False) if isinstance(result, dict) else str(result)
 
     def _generate_mock_data(self):
@@ -201,6 +259,8 @@ class LangChainIntegrationTest:
 
 if __name__ == '__main__':
     tester = LangChainIntegrationTest()
+
+    # tester.test_command_bulid()
     
     # 测试案例集
     test_cases = [

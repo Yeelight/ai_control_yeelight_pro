@@ -183,7 +183,7 @@ def submit():
         response = ''.join(full_response)
         command_data = extract_json(response)
         
-        result_message = control_device(command_data, socketio) if command_data else "Invalid command data"
+        result_message = control_device(command_data, socketio, node_info_response) if command_data else "Invalid command data"
         
         # Use Piper for speech synthesis, convert result message to audio file
         voice = PiperVoice.load(model_path, config_path=config_path)
