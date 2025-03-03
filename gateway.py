@@ -200,6 +200,9 @@ def send_command(websocket, command):
             if command_method =="gateway_get.topology" and method!="gateway_post.topology":
                 logger.log_message(f"命令方法不匹配: {command_method} != {method}", level="ERROR")
                 return send_command(websocket, command)  # 重新发送命令
+            if command_method =="gateway_set.prop":
+                logger.log_message(f"发送设备控制命令成功", level="INFO")
+                return "success"
 
             if obj.get("id") == command["id"]:
                 return obj
