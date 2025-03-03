@@ -27,9 +27,6 @@ else
     echo "ffmpeg 已安装"
 fi
 
-# 安装 Python 包
-echo "安装 Python 包..."
-pip install piper-tts --no-deps piper-phonemize-cross onnxruntime numpy
 
 # 克隆项目
 echo "克隆项目..."
@@ -49,6 +46,7 @@ source venv/bin/activate
 
 # 安装项目依赖
 echo "安装项目依赖..."
+/opt/homebrew/opt/python@3.10/bin/pip3.10 install piper-tts --no-deps piper-phonemize-cross onnxruntime numpy
 /opt/homebrew/opt/python@3.10/bin/pip3.10 install -r requirements.txt -i https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple
 
 # 启动 Flask 应用程序
