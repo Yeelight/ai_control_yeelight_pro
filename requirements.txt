@@ -17,7 +17,6 @@ requests==2.28.2  # For making HTTP requests
 ollama==0.4.7  # Specify the version for the Ollama package
 torch==1.12.1
 dnspython==2.2.1
-sqlite3
 dataclasses
 pydantic
 
